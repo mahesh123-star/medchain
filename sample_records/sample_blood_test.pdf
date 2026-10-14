@@ -1,0 +1,68 @@
+%PDF-1.4
+%‚„œ”
+1 0 obj
+<< /Type /Catalog /Pages 2 0 R >>
+endobj
+2 0 obj
+<< /Type /Pages /Kids [3 0 R] /Count 1 >>
+endobj
+3 0 obj
+<< /Type /Page /Parent 2 0 R /MediaBox [0 0 595 842] /Contents 4 0 R /Resources << /Font << /F1 5 0 R /F2 6 0 R >> >> >>
+endobj
+4 0 obj
+<< /Length 1752 >>
+stream
+BT
+/F1 16 Tf
+50 750 Td
+(METROPOLITAN GENERAL HOSPITAL - LAB REPORT) Tj
+ET
+BT
+/F2 10 Tf
+50 720 Td
+15 TL
+(Patient Name: John Doe \(SYNTHETIC RECORD FOR TESTING\)) '
+(Date of Birth: 1985-04-12 | Sex: Male | Date of Service: 2026-10-10) '
+(Ordering Physician: Dr. Sarah Jenkins, MD | Specimen: Venous Blood) '
+(--------------------------------------------------------------------------------) '
+(TEST NAME                      RESULT       REFERENCE INTERVAL   FLAG) '
+(--------------------------------------------------------------------------------) '
+(Fasting Blood Glucose          118 mg/dL    70 - 99 mg/dL        HIGH) '
+(Hemoglobin A1c \(HbA1c\)         6.2 %        < 5.7 %              HIGH) '
+(Total Cholesterol              215 mg/dL    < 200 mg/dL          HIGH) '
+(Triglycerides                  185 mg/dL    < 150 mg/dL          HIGH) '
+(HDL Cholesterol                 42 mg/dL    > 40 mg/dL           NORMAL) '
+(LDL Cholesterol \(calculated\)   136 mg/dL    < 100 mg/dL          HIGH) '
+(Serum Creatinine               0.95 mg/dL   0.70 - 1.30 mg/dL    NORMAL) '
+(Estimated GFR \(eGFR\)            94 mL/min   > 60 mL/min          NORMAL) '
+(Blood Urea Nitrogen \(BUN\)       16 mg/dL    7 - 20 mg/dL         NORMAL) '
+(--------------------------------------------------------------------------------) '
+(CLINICAL IMPRESSION & RECOMMENDATIONS:) '
+(1. Impaired fasting glucose and elevated HbA1c consistent with pre-diabetes.) '
+(2. Mild hyperlipidemia with elevated LDL and triglycerides.) '
+(3. Recommend dietary lifestyle modifications, low glycemic intake, and regular exercise.) '
+(4. Follow-up lipid and glycemic panel recommended in 3 months.) '
+(5. Prescribed: Metformin 500mg once daily with evening meal if diet unadjusted.) '
+ET
+endstream
+endobj
+5 0 obj
+<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica-Bold >>
+endobj
+6 0 obj
+<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>
+endobj
+xref
+0 7
+0000000000 65535 f 
+0000000015 00000 n 
+0000000064 00000 n 
+0000000121 00000 n 
+0000000257 00000 n 
+0000002060 00000 n 
+0000002135 00000 n 
+trailer
+<< /Size 7 /Root 1 0 R >>
+startxref
+2205
+%%EOF

@@ -1,0 +1,8 @@
+fastapi==0.115.0
+uvicorn[standard]==0.30.6
+python-dotenv==1.0.1
+pydantic==2.9.2
+pypdf==4.3.1
+httpx==0.27.2
+# Optional: openai>=1.52.0  (uncomment and install if you have an OpenAI key)
+# Optional: google-generativeai>=0.8.3  (uncomment if using Gemini)

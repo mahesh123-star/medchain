@@ -1,0 +1,66 @@
+%PDF-1.4
+%‚„œ”
+1 0 obj
+<< /Type /Catalog /Pages 2 0 R >>
+endobj
+2 0 obj
+<< /Type /Pages /Kids [3 0 R] /Count 1 >>
+endobj
+3 0 obj
+<< /Type /Page /Parent 2 0 R /MediaBox [0 0 595 842] /Contents 4 0 R /Resources << /Font << /F1 5 0 R /F2 6 0 R >> >> >>
+endobj
+4 0 obj
+<< /Length 1406 >>
+stream
+BT
+/F1 16 Tf
+50 750 Td
+(ADVANCED NEURO-IMAGING INSTITUTE - MRI REPORT) Tj
+ET
+BT
+/F2 10 Tf
+50 720 Td
+15 TL
+(Patient Name: Robert Chen \(SYNTHETIC RECORD FOR TESTING\)) '
+(Date of Birth: 1962-11-03 | Sex: Male | Exam Date: 2026-10-08) '
+(Radiologist: Dr. Elena Rostova, MD | Clinical Indication: Recurrent Cephalea) '
+(--------------------------------------------------------------------------------) '
+(EXAMINATION: Magnetic Resonance Imaging \(MRI\) of the Brain without IV Contrast) '
+(TECHNIQUE: Multiplanar T1, T2, FLAIR, DWI, and Gradient Echo sequences.) '
+() '
+(FINDINGS:) '
+(- Brain parenchyma demonstrates normal morphology and signal intensity.) '
+(- Minimal punctate non-specific white matter hyperintensities in subcortical regions,) '
+(  common and consistent with mild chronic microvascular ischemic changes of age.) '
+(- No acute intracranial hemorrhage, mass effect, midline shift, or herniation.) '
+(- Ventricular system and basilar cisterns are within normal limits for patient age.) '
+(- Diffusion weighted imaging \(DWI\) reveals no evidence of acute territorial infarction.) '
+(- Major intracranial vascular flow voids appear preserved.) '
+() '
+(IMPRESSION:) '
+(1. Unremarkable brain MRI with no acute intracranial abnormality.) '
+(2. Mild chronic microvascular white matter changes, non-urgent.) '
+(3. Recommend neurologist follow-up for tension vs migraine headache management.) '
+ET
+endstream
+endobj
+5 0 obj
+<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica-Bold >>
+endobj
+6 0 obj
+<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>
+endobj
+xref
+0 7
+0000000000 65535 f 
+0000000015 00000 n 
+0000000064 00000 n 
+0000000121 00000 n 
+0000000257 00000 n 
+0000001714 00000 n 
+0000001789 00000 n 
+trailer
+<< /Size 7 /Root 1 0 R >>
+startxref
+1859
+%%EOF
