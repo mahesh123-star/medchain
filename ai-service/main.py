@@ -1,18 +1,13 @@
 """
 MedChain AI Summarization Service.
 
-Accepts decrypted medical report text and returns a structured summary.
-The calling application must verify authorization and decrypt the file
-BEFORE sending text to this endpoint.
-
-Provider priority:
-  1. OpenAI (if OPENAI_API_KEY is set)
-  2. Google Gemini (if GEMINI_API_KEY is set)
-  3. Local extractive fallback (always available)
+Accepts decrypted medical report text or base64 PDF bytes and returns
+a structured clinical summary in clean words.
 """
 from __future__ import annotations
 
 import os
+from typing import Optional
 from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
@@ -47,7 +42,8 @@ app.add_middleware(
 
 
 class SummarizeRequest(BaseModel):
-    text: str
+    text: Optional[str] = ""
+    pdf_base64: Optional[str] = None
 
 
 class SummarizeResponse(BaseModel):
@@ -62,7 +58,7 @@ class SummarizeResponse(BaseModel):
 
 @app.post("/summarize", response_model=SummarizeResponse)
 async def summarize_report(req: SummarizeRequest):
-    summary, provider = await summarize(req.text)
+    summary, provider = await summarize(req.text or "", req.pdf_base64)
     return SummarizeResponse(summary=summary, provider=provider)
 
 

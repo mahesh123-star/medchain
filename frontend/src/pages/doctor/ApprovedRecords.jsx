@@ -64,6 +64,15 @@ export default function ApprovedRecords() {
     setDecrypting(null);
   };
 
+  const uint8ArrayToBase64 = (bytes) => {
+    let binary = '';
+    const len = bytes.byteLength;
+    for (let i = 0; i < len; i += 8192) {
+      binary += String.fromCharCode.apply(null, bytes.subarray(i, Math.min(i + 8192, len)));
+    }
+    return btoa(binary);
+  };
+
   const getAISummary = async (rec) => {
     setSummarizing(rec.recordId);
     try {
@@ -73,9 +82,11 @@ export default function ApprovedRecords() {
       const { aes_key_b64, iv_b64 } = await retrieveKey(rec.recordId.toString(), address);
       const decryptedBytes = await decryptData(new Uint8Array(encryptedBuffer), aes_key_b64, iv_b64);
 
-      const text = new TextDecoder('utf-8', { fatal: false }).decode(decryptedBytes);
-      const result = await summarizeReport(text);
+      // Convert clean decrypted PDF bytes to base64 so PyPDF extracts text accurately
+      const pdfBase64 = uint8ArrayToBase64(decryptedBytes);
+      const result = await summarizeReport('', pdfBase64);
       setSummaries(prev => ({ ...prev, [rec.recordId]: result.summary }));
+      toast.success('Clinical summary generated in words');
     } catch (err) {
       toast.error(err.message || 'AI summary failed');
     }

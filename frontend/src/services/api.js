@@ -55,11 +55,11 @@ export async function retrieveKey(recordId, doctorAddress) {
   return res.json();
 }
 
-export async function summarizeReport(text) {
+export async function summarizeReport(text = '', pdfBase64 = null) {
   const res = await fetch(`${AI_SERVICE}/summarize`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ text }),
+    body: JSON.stringify({ text: text || '', pdf_base64: pdfBase64 }),
   });
   await handleResponse(res);
   return res.json();

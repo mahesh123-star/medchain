@@ -75,11 +75,28 @@ export function WalletProvider({ children }) {
     if (!window.ethereum) return;
 
     const handleAccountsChanged = async (accounts) => {
-      if (accounts.length === 0) {
+      if (!accounts || accounts.length === 0) {
         disconnect();
       } else {
-        logEvent('INFO', `MetaMask account switched to ${accounts[0]}`);
-        await connect();
+        const newAddr = accounts[0];
+        logEvent('INFO', `MetaMask account switched to ${newAddr}`);
+        try {
+          const provider = new ethers.BrowserProvider(window.ethereum);
+          const signer = await provider.getSigner();
+          const address = await signer.getAddress();
+          const role = await getRole(address, provider);
+
+          setProvider(provider);
+          setSigner(signer);
+          setAddress(address);
+          setRole(role);
+
+          const roleName = role === ROLE.Doctor ? 'Doctor' : role === ROLE.Patient ? 'Patient' : 'Unregistered';
+          toast.success(`Switched to ${roleName} account (${address.slice(0, 6)}...${address.slice(-4)})`, { id: 'acct-switch' });
+        } catch (err) {
+          console.error('Error switching account:', err);
+          await connect();
+        }
       }
     };
 

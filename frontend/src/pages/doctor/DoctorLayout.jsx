@@ -1,8 +1,20 @@
 import React from 'react';
-import { Outlet } from 'react-router-dom';
+import { Outlet, Navigate } from 'react-router-dom';
+import { useWallet } from '../../context/WalletContext';
+import { ROLE } from '../../services/web3';
 import Sidebar from '../../components/Sidebar';
 
 export default function DoctorLayout() {
+  const { role } = useWallet();
+
+  // If user switched to patient or unregistered wallet in MetaMask, redirect immediately
+  if (role === ROLE.Patient) {
+    return <Navigate to="/patient" replace />;
+  }
+  if (role === ROLE.None) {
+    return <Navigate to="/register" replace />;
+  }
+
   return (
     <div className="flex min-h-screen">
       <Sidebar />

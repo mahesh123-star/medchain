@@ -1,5 +1,5 @@
-import React from 'react';
-import { Routes, Route, Navigate } from 'react-router-dom';
+import React, { useEffect } from 'react';
+import { Routes, Route, Navigate, useNavigate, useLocation } from 'react-router-dom';
 import { WalletProvider, useWallet } from './context/WalletContext';
 import { ROLE } from './services/web3';
 import Spinner from './components/Spinner';
@@ -22,6 +22,23 @@ import SystemLogs from './pages/SystemLogs';
 
 function AppRoutes() {
   const { address, role, isInitializing } = useWallet();
+  const navigate = useNavigate();
+  const location = useLocation();
+
+  // Automatically navigate when role changes (e.g. MetaMask switches between patient & doctor)
+  useEffect(() => {
+    if (isInitializing || !address) return;
+
+    const path = location.pathname;
+
+    if (role === ROLE.Doctor && (path.startsWith('/patient') || path === '/register')) {
+      navigate('/doctor', { replace: true });
+    } else if (role === ROLE.Patient && (path.startsWith('/doctor') || path === '/register')) {
+      navigate('/patient', { replace: true });
+    } else if (role === ROLE.None && (path.startsWith('/patient') || path.startsWith('/doctor'))) {
+      navigate('/register', { replace: true });
+    }
+  }, [role, address, isInitializing, location.pathname, navigate]);
 
   // Prevent routing redirects while checking if MetaMask was already connected
   if (isInitializing) {
