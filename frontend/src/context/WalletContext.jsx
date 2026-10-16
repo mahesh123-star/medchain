@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
-import { connectWallet, getRole, ROLE } from '../services/web3';
+import { connectWallet, checkExistingConnection, getRole, ROLE } from '../services/web3';
+import { logEvent } from '../services/logger';
 import toast from 'react-hot-toast';
 
 const WalletContext = createContext(null);
@@ -10,16 +11,41 @@ export function WalletProvider({ children }) {
   const [signer, setSigner] = useState(null);
   const [role, setRole] = useState(ROLE.None);
   const [loading, setLoading] = useState(false);
+  const [isInitializing, setIsInitializing] = useState(true);
+
+  // Restore connection automatically on page load/refresh
+  useEffect(() => {
+    let mounted = true;
+    async function restoreSession() {
+      try {
+        const session = await checkExistingConnection();
+        if (mounted && session) {
+          setProvider(session.provider);
+          setSigner(session.signer);
+          setAddress(session.address);
+          setRole(session.role);
+        }
+      } catch (err) {
+        console.error('Session restore error:', err);
+      } finally {
+        if (mounted) setIsInitializing(false);
+      }
+    }
+    restoreSession();
+    return () => {
+      mounted = false;
+    };
+  }, []);
 
   const connect = useCallback(async () => {
     setLoading(true);
     try {
       const result = await connectWallet();
+      // Set all states together to avoid intermediate renders with role = None
       setProvider(result.provider);
       setSigner(result.signer);
       setAddress(result.address);
-      const r = await getRole(result.address, result.provider);
-      setRole(r);
+      setRole(result.role);
     } catch (err) {
       toast.error(err.message || 'Failed to connect wallet');
     } finally {
@@ -28,11 +54,12 @@ export function WalletProvider({ children }) {
   }, []);
 
   const disconnect = useCallback(() => {
+    logEvent('INFO', `User disconnected wallet ${address || ''}`);
     setAddress(null);
     setProvider(null);
     setSigner(null);
     setRole(ROLE.None);
-  }, []);
+  }, [address]);
 
   const refreshRole = useCallback(async (prov, addr) => {
     const p = prov || provider;
@@ -40,23 +67,50 @@ export function WalletProvider({ children }) {
     if (!a || !p) return;
     const r = await getRole(a, p);
     setRole(r);
+    logEvent('INFO', `Role refreshed for ${a}: ${r === ROLE.Patient ? 'Patient' : r === ROLE.Doctor ? 'Doctor' : 'None'}`);
+    return r;
   }, [address, provider]);
 
   useEffect(() => {
     if (!window.ethereum) return;
-    const handleAccountsChanged = (accounts) => {
-      if (accounts.length === 0) disconnect();
-      else connect();
+
+    const handleAccountsChanged = async (accounts) => {
+      if (accounts.length === 0) {
+        disconnect();
+      } else {
+        logEvent('INFO', `MetaMask account switched to ${accounts[0]}`);
+        await connect();
+      }
     };
+
+    const handleChainChanged = () => {
+      logEvent('INFO', 'MetaMask network changed. Reloading page...');
+      window.location.reload();
+    };
+
     window.ethereum.on('accountsChanged', handleAccountsChanged);
-    window.ethereum.on('chainChanged', () => window.location.reload());
+    window.ethereum.on('chainChanged', handleChainChanged);
+
     return () => {
       window.ethereum.removeListener('accountsChanged', handleAccountsChanged);
+      window.ethereum.removeListener('chainChanged', handleChainChanged);
     };
   }, [connect, disconnect]);
 
   return (
-    <WalletContext.Provider value={{ address, provider, signer, role, loading, connect, disconnect, refreshRole }}>
+    <WalletContext.Provider
+      value={{
+        address,
+        provider,
+        signer,
+        role,
+        loading,
+        isInitializing,
+        connect,
+        disconnect,
+        refreshRole,
+      }}
+    >
       {children}
     </WalletContext.Provider>
   );
