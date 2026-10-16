@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
-import { connectWallet, checkExistingConnection, getRole, ROLE } from '../services/web3';
+import { ethers } from 'ethers';
+import { connectWallet, checkExistingConnection, getRole, switchMetaMaskAccount, ROLE } from '../services/web3';
 import { logEvent } from '../services/logger';
 import toast from 'react-hot-toast';
 
@@ -41,7 +42,6 @@ export function WalletProvider({ children }) {
     setLoading(true);
     try {
       const result = await connectWallet();
-      // Set all states together to avoid intermediate renders with role = None
       setProvider(result.provider);
       setSigner(result.signer);
       setAddress(result.address);
@@ -64,12 +64,23 @@ export function WalletProvider({ children }) {
   const refreshRole = useCallback(async (prov, addr) => {
     const p = prov || provider;
     const a = addr || address;
-    if (!a || !p) return;
+    if (!a) return;
     const r = await getRole(a, p);
     setRole(r);
     logEvent('INFO', `Role refreshed for ${a}: ${r === ROLE.Patient ? 'Patient' : r === ROLE.Doctor ? 'Doctor' : 'None'}`);
     return r;
   }, [address, provider]);
+
+  const switchAccount = useCallback(async () => {
+    try {
+      await switchMetaMaskAccount();
+      await connect();
+    } catch (err) {
+      if (err.code !== 4001) {
+        toast.error('Could not open MetaMask account selector');
+      }
+    }
+  }, [connect]);
 
   useEffect(() => {
     if (!window.ethereum) return;
@@ -81,18 +92,17 @@ export function WalletProvider({ children }) {
         const newAddr = accounts[0];
         logEvent('INFO', `MetaMask account switched to ${newAddr}`);
         try {
-          const provider = new ethers.BrowserProvider(window.ethereum);
-          const signer = await provider.getSigner();
-          const address = await signer.getAddress();
-          const role = await getRole(address, provider);
+          const browserProvider = new ethers.BrowserProvider(window.ethereum);
+          const signer = await browserProvider.getSigner();
+          const detectedRole = await getRole(newAddr, browserProvider);
 
-          setProvider(provider);
+          setProvider(browserProvider);
           setSigner(signer);
-          setAddress(address);
-          setRole(role);
+          setAddress(newAddr);
+          setRole(detectedRole);
 
-          const roleName = role === ROLE.Doctor ? 'Doctor' : role === ROLE.Patient ? 'Patient' : 'Unregistered';
-          toast.success(`Switched to ${roleName} account (${address.slice(0, 6)}...${address.slice(-4)})`, { id: 'acct-switch' });
+          const roleName = detectedRole === ROLE.Doctor ? 'Doctor' : detectedRole === ROLE.Patient ? 'Patient' : 'Unregistered';
+          toast.success(`Switched to ${roleName} (${newAddr.slice(0, 6)}...${newAddr.slice(-4)})`, { id: 'acct-switch' });
         } catch (err) {
           console.error('Error switching account:', err);
           await connect();
@@ -126,6 +136,7 @@ export function WalletProvider({ children }) {
         connect,
         disconnect,
         refreshRole,
+        switchAccount,
       }}
     >
       {children}

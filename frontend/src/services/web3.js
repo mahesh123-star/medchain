@@ -96,15 +96,36 @@ export function getContract(signerOrProvider) {
 }
 
 export async function getRole(address, provider) {
+  if (!address) return ROLE.None;
+  // 1. First attempt: Query Anvil directly on 127.0.0.1:8545 to avoid MetaMask internal state caching
   try {
-    const contract = getContract(provider);
-    const role = await contract.roles(address);
+    const directProvider = new ethers.JsonRpcProvider('http://127.0.0.1:8545');
+    const directContract = new ethers.Contract(MEDCHAIN_ADDRESS, MEDCHAIN_ABI, directProvider);
+    const role = await directContract.roles(address);
     return Number(role);
-  } catch (err) {
-    console.error('Error fetching role:', err);
-    return ROLE.None;
+  } catch (directErr) {
+    // 2. Fallback: Query via provider
+    try {
+      if (provider) {
+        const contract = getContract(provider);
+        const role = await contract.roles(address);
+        return Number(role);
+      }
+    } catch (err) {
+      console.error('Error fetching role:', err);
+    }
   }
+  return ROLE.None;
 }
+
+export async function switchMetaMaskAccount() {
+  if (!window.ethereum) throw new Error('MetaMask not detected');
+  return await window.ethereum.request({
+    method: 'wallet_requestPermissions',
+    params: [{ eth_accounts: {} }],
+  });
+}
+
 
 export function formatAddress(addr) {
   if (!addr) return '';

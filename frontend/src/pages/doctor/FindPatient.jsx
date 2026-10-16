@@ -1,9 +1,11 @@
 import React, { useState } from 'react';
 import { Search, FileText } from 'lucide-react';
 import { useWallet } from '../../context/WalletContext';
-import { getContract } from '../../services/web3';
+import { getContract, parseContractError } from '../../services/web3';
 import Spinner from '../../components/Spinner';
 import toast from 'react-hot-toast';
+
+const DEMO_PATIENT = '0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266';
 
 export default function FindPatient() {
   const { provider, signer } = useWallet();
@@ -12,26 +14,35 @@ export default function FindPatient() {
   const [loading, setLoading] = useState(false);
   const [requesting, setRequesting] = useState(null);
 
-  const search = async () => {
-    if (!patientAddr.match(/^0x[0-9a-fA-F]{40}$/)) {
+  const search = async (overrideAddr) => {
+    const target = overrideAddr || patientAddr;
+    if (!target.match(/^0x[0-9a-fA-F]{40}$/)) {
       toast.error('Enter a valid Ethereum address');
       return;
     }
     setLoading(true);
     try {
       const contract = getContract(provider);
-      const ids = await contract.getPatientRecords(patientAddr);
+      const ids = await contract.getPatientRecords(target);
       const metas = await Promise.all(ids.map(id => contract.getRecordMeta(id)));
       setRecords(metas.map((m, i) => ({
         recordId: ids[i],
         name: m[2],
         uploadedAt: m[3],
       })));
+      if (ids.length === 0) {
+        toast('No records found for this patient address', { icon: 'ℹ️' });
+      }
     } catch (err) {
       console.error(err);
-      toast.error('Failed to fetch records');
+      toast.error(parseContractError(err) || 'Failed to fetch records');
     }
     setLoading(false);
+  };
+
+  const handleDemoFill = () => {
+    setPatientAddr(DEMO_PATIENT);
+    search(DEMO_PATIENT);
   };
 
   const requestAccess = async (recordId) => {
@@ -42,7 +53,7 @@ export default function FindPatient() {
       await tx.wait();
       toast.success('Access request submitted');
     } catch (err) {
-      toast.error(err.shortMessage || err.message || 'Request failed');
+      toast.error(parseContractError(err));
     }
     setRequesting(null);
   };
@@ -50,7 +61,17 @@ export default function FindPatient() {
   return (
     <div className="max-w-xl">
       <h1 className="text-2xl font-bold text-slate-800 mb-1">Find Patient</h1>
-      <p className="text-slate-500 text-sm mb-6">Enter a patient wallet address to view records and request access.</p>
+      <p className="text-slate-500 text-sm mb-4">Enter a patient wallet address to view records and request access.</p>
+      
+      <div className="mb-4">
+        <button
+          onClick={handleDemoFill}
+          className="text-xs text-blue-600 hover:text-blue-800 bg-blue-50 hover:bg-blue-100 border border-blue-200 rounded px-2.5 py-1 font-medium transition-colors"
+        >
+          Quick Test: Search Demo Patient (0xf39F...2266)
+        </button>
+      </div>
+
       <div className="flex gap-2 mb-6">
         <input
           value={patientAddr}
@@ -59,7 +80,7 @@ export default function FindPatient() {
           className="flex-1 border border-slate-300 rounded-lg px-3 py-2 text-sm font-mono focus:outline-none focus:ring-2 focus:ring-blue-400"
         />
         <button
-          onClick={search}
+          onClick={() => search()}
           disabled={loading}
           className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm transition-colors disabled:opacity-50"
         >
