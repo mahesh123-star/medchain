@@ -20,8 +20,29 @@ PINATA_JWT = os.getenv("PINATA_JWT", "").strip()
 PINATA_GATEWAY = os.getenv("PINATA_GATEWAY", "https://gateway.pinata.cloud")
 MAX_FILE_BYTES = 20 * 1024 * 1024  # 20 MB
 
-# Local cache for offline simulation
+# Local cache and persistent disk storage for IPFS files
+IPFS_STORAGE_DIR = os.path.join(os.path.dirname(os.path.dirname(__file__)), "data", "ipfs_storage")
+os.makedirs(IPFS_STORAGE_DIR, exist_ok=True)
+
 _local_ipfs_cache: dict[str, bytes] = {}
+
+def _save_file_to_disk(cid: str, data: bytes):
+    try:
+        path = os.path.join(IPFS_STORAGE_DIR, cid)
+        with open(path, "wb") as f:
+            f.write(data)
+    except Exception as e:
+        print(f"[IPFS Persistence] Error saving {cid}: {e}")
+
+def _load_file_from_disk(cid: str) -> bytes | None:
+    path = os.path.join(IPFS_STORAGE_DIR, cid)
+    if os.path.exists(path):
+        try:
+            with open(path, "rb") as f:
+                return f.read()
+        except Exception as e:
+            print(f"[IPFS Persistence] Error reading {cid}: {e}")
+    return None
 
 
 class UploadResponse(BaseModel):
@@ -52,7 +73,8 @@ async def upload_encrypted_file(
         digest = hashlib.sha256(content).digest()
         simulated_cid = "Qm" + hashlib.sha256(digest).hexdigest()[:44]
         _local_ipfs_cache[simulated_cid] = content
-        print(f"[IPFS Mock] Stored {record_name} locally under simulated CID: {simulated_cid}")
+        _save_file_to_disk(simulated_cid, content)
+        print(f"[IPFS Mock] Stored {record_name} locally and persisted to disk under CID: {simulated_cid}")
         return UploadResponse(
             cid=simulated_cid,
             gateway_url=f"/ipfs/retrieve/{simulated_cid}",
@@ -96,9 +118,15 @@ async def retrieve_encrypted_file(cid: str):
     if not cid or len(cid) > 128:
         raise HTTPException(status_code=400, detail="Invalid CID")
 
-    # Check local cache first (works offline or for cached items)
+    # Check local in-memory cache first
     if cid in _local_ipfs_cache:
         return Response(content=_local_ipfs_cache[cid], media_type="application/octet-stream")
+
+    # Check local disk persistence next
+    disk_data = _load_file_from_disk(cid)
+    if disk_data is not None:
+        _local_ipfs_cache[cid] = disk_data
+        return Response(content=disk_data, media_type="application/octet-stream")
 
     url = f"{PINATA_GATEWAY}/ipfs/{cid}"
     async with httpx.AsyncClient(timeout=60.0) as client:

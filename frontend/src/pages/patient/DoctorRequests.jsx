@@ -22,7 +22,7 @@ export default function DoctorRequests() {
       const myAddress = await signer.getAddress();
       const filter = contract.filters.AccessRequested();
       const events = await contract.queryFilter(filter, 0, 'latest');
-      const pending = [];
+      const pendingMap = new Map();
       for (const ev of events) {
         const { recordId, doctor } = ev.args;
         const meta = await contract.getRecordMeta(recordId).catch(() => null);
@@ -30,7 +30,8 @@ export default function DoctorRequests() {
         const patient = meta[1];
         if (patient.toLowerCase() !== myAddress.toLowerCase()) continue;
         const req = await contract.getAccessRequest(recordId, doctor);
-        pending.push({
+        const mapKey = `${recordId}-${doctor}`.toLowerCase();
+        pendingMap.set(mapKey, {
           recordId,
           doctor,
           status: req.status,
@@ -38,7 +39,9 @@ export default function DoctorRequests() {
           requestedAt: req.requestedAt,
         });
       }
-      setRequests(pending);
+      const list = Array.from(pendingMap.values());
+      list.sort((a, b) => Number(b.requestedAt) - Number(a.requestedAt));
+      setRequests(list);
     } catch (err) {
       console.error(err);
       toast.error('Failed to load requests');

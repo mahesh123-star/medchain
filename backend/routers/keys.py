@@ -48,10 +48,35 @@ def _get_wrap_key() -> bytes:
     return raw
 
 
-# In-memory store for this academic prototype.
-# Replace with a database (e.g., SQLite, PostgreSQL) in production.
+DATA_DIR = os.path.join(os.path.dirname(os.path.dirname(__file__)), "data")
+KEYS_FILE = os.path.join(DATA_DIR, "keys_store.json")
+
+# Persistent key and grant store: automatically loaded from and saved to disk
 _key_store: dict[str, str] = {}   # record_id → base64(wrapped_key_bundle)
 _grant_store: dict[str, str] = {} # f"{record_id}:{doctor_addr}" → base64(grant_bundle)
+
+def _load_stores():
+    global _key_store, _grant_store
+    os.makedirs(DATA_DIR, exist_ok=True)
+    if os.path.exists(KEYS_FILE):
+        try:
+            with open(KEYS_FILE, "r", encoding="utf-8") as f:
+                content = json.load(f)
+                _key_store = content.get("keys", {})
+                _grant_store = content.get("grants", {})
+                print(f"[Keys Persistence] Loaded {len(_key_store)} keys and {len(_grant_store)} grants from disk.")
+        except Exception as e:
+            print(f"[Keys Persistence] Error loading keys: {e}")
+
+def _save_stores():
+    os.makedirs(DATA_DIR, exist_ok=True)
+    try:
+        with open(KEYS_FILE, "w", encoding="utf-8") as f:
+            json.dump({"keys": _key_store, "grants": _grant_store}, f, indent=2)
+    except Exception as e:
+        print(f"[Keys Persistence] Error saving keys: {e}")
+
+_load_stores()
 
 
 def _wrap(plaintext: bytes) -> str:
@@ -106,6 +131,7 @@ async def store_key(req: StoreKeyRequest):
     """
     bundle = json.dumps({"key": req.aes_key_b64, "iv": req.iv_b64}).encode()
     _key_store[req.record_id] = _wrap(bundle)
+    _save_stores()
     return {"stored": True, "record_id": req.record_id}
 
 
@@ -132,6 +158,7 @@ async def grant_key(req: GrantKeyRequest):
 
     grant_key_str = f"{req.record_id}:{req.doctor_address.lower()}"
     _grant_store[grant_key_str] = _wrap(grant_bundle)
+    _save_stores()
     return {"granted": True}
 
 

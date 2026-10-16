@@ -7,23 +7,72 @@ import Spinner from '../../components/Spinner';
 
 export default function PatientOverview() {
   // ✅ Use signer not provider — getMyRecords has onlyPatient modifier
-  const { signer, address } = useWallet();
-  const [recordCount, setRecordCount] = useState(null);
+  const { signer, provider, address } = useWallet();
+  const [recordCount, setRecordCount] = useState(0);
+  const [pendingCount, setPendingCount] = useState(0);
+  const [approvedCount, setApprovedCount] = useState(0);
   const [loading, setLoading] = useState(true);
 
   const load = useCallback(async () => {
-    if (!signer || !address) return;
+    if (!address) return;
     setLoading(true);
     try {
-      const contract = getContract(signer);
-      const records = await contract.getMyRecords();
-      setRecordCount(records.length);
+      const activeContract = signer ? getContract(signer) : getContract(provider);
+      // 1. Fetch records count using getPatientRecords(address)
+      const records = await activeContract.getPatientRecords(address).catch(async () => {
+        if (signer) return await activeContract.getMyRecords();
+        return [];
+      });
+      setRecordCount(records ? records.length : 0);
+
+      // 2. Fetch pending doctor requests
+      try {
+        const filterReq = activeContract.filters.AccessRequested();
+        const reqEvents = await activeContract.queryFilter(filterReq, 0, 'latest');
+        let pending = 0;
+        const seen = new Set();
+        for (const ev of reqEvents) {
+          const { recordId, doctor } = ev.args;
+          const key = `${recordId}-${doctor}`.toLowerCase();
+          if (seen.has(key)) continue;
+          seen.add(key);
+          const meta = await activeContract.getRecordMeta(recordId).catch(() => null);
+          if (meta && meta[1].toLowerCase() === address.toLowerCase()) {
+            const req = await activeContract.getAccessRequest(recordId, doctor).catch(() => null);
+            if (req && Number(req.status) === 1) pending++; // 1 = Pending
+          }
+        }
+        setPendingCount(pending);
+      } catch (err) {
+        console.warn('Could not count pending requests:', err);
+      }
+
+      // 3. Fetch active approved grants
+      try {
+        const filterApp = activeContract.filters.AccessApproved();
+        const appEvents = await activeContract.queryFilter(filterApp, 0, 'latest');
+        let approved = 0;
+        const seenApp = new Set();
+        for (const ev of appEvents) {
+          const { recordId, doctor } = ev.args;
+          const key = `${recordId}-${doctor}`.toLowerCase();
+          if (seenApp.has(key)) continue;
+          seenApp.add(key);
+          const meta = await activeContract.getRecordMeta(recordId).catch(() => null);
+          if (meta && meta[1].toLowerCase() === address.toLowerCase()) {
+            const req = await activeContract.getAccessRequest(recordId, doctor).catch(() => null);
+            if (req && Number(req.status) === 2) approved++; // 2 = Approved
+          }
+        }
+        setApprovedCount(approved);
+      } catch (err) {
+        console.warn('Could not count approved grants:', err);
+      }
     } catch (err) {
       console.error('Overview load error:', err);
-      setRecordCount(0);
     }
     setLoading(false);
-  }, [signer, address]);
+  }, [signer, provider, address]);
 
   useEffect(() => {
     load();
@@ -52,14 +101,14 @@ export default function PatientOverview() {
     },
     {
       label: 'Doctor Requests',
-      value: '→',
+      value: loading ? '...' : pendingCount,
       icon: Bell,
       color: 'yellow',
       to: '/patient/requests',
     },
     {
       label: 'Approved Access',
-      value: '→',
+      value: loading ? '...' : approvedCount,
       icon: CheckCircle,
       color: 'green',
       to: '/patient/approved',
