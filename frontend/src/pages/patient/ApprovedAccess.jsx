@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { CheckCircle } from 'lucide-react';
 import { useWallet } from '../../context/WalletContext';
-import { getContract, ACCESS_STATUS } from '../../services/web3';
+import { getContract, ACCESS_STATUS, sendWithCorrectNonce, parseContractError } from '../../services/web3';
 import StatusBadge from '../../components/StatusBadge';
 import ConfirmDialog from '../../components/ConfirmDialog';
 import Spinner from '../../components/Spinner';
@@ -21,16 +21,19 @@ export default function ApprovedAccess() {
       const myAddress = await signer.getAddress();
       const filter = contract.filters.AccessApproved();
       const events = await contract.queryFilter(filter, 0, 'latest');
-      const results = [];
+      const seen = new Map();
       for (const ev of events) {
         const { recordId, doctor } = ev.args;
+        const key = `${recordId}-${doctor}`.toLowerCase();
+        if (seen.has(key)) continue;
+        seen.set(key, true);
         const meta = await contract.getRecordMeta(recordId).catch(() => null);
         if (!meta) continue;
         if (meta[1].toLowerCase() !== myAddress.toLowerCase()) continue;
         const req = await contract.getAccessRequest(recordId, doctor);
-        results.push({ recordId, doctor, status: req.status, recordName: meta[2] });
+        seen.set(key, { recordId, doctor, status: req.status, recordName: meta[2] });
       }
-      setGrants(results);
+      setGrants(Array.from(seen.values()).filter(v => typeof v === 'object'));
     } catch (err) {
       console.error(err);
     }
@@ -46,16 +49,19 @@ export default function ApprovedAccess() {
     setActing(true);
     try {
       const contract = getContract(signer);
-      const tx = await contract.revokeAccess(recordId, doctor);
+      const tx = await sendWithCorrectNonce(signer, (overrides) =>
+        contract.revokeAccess(recordId, doctor, overrides)
+      );
       await tx.wait();
       toast.success('Access revoked');
       setConfirm(null);
       await load();
     } catch (err) {
-      toast.error(err.shortMessage || err.message || 'Revoke failed');
+      toast.error(parseContractError(err));
     }
     setActing(false);
   };
+
 
   if (loading) return <Spinner />;
 

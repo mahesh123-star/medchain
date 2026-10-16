@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Search, FileText } from 'lucide-react';
 import { useWallet } from '../../context/WalletContext';
-import { getContract, parseContractError } from '../../services/web3';
+import { getContract, parseContractError, sendWithCorrectNonce } from '../../services/web3';
 import Spinner from '../../components/Spinner';
 import toast from 'react-hot-toast';
 
@@ -49,7 +49,9 @@ export default function FindPatient() {
     setRequesting(recordId);
     try {
       const contract = getContract(signer);
-      const tx = await contract.requestAccess(recordId, 0);
+      const tx = await sendWithCorrectNonce(signer, (overrides) =>
+        contract.requestAccess(recordId, 0, overrides)
+      );
       await tx.wait();
       toast.success('Access request submitted');
     } catch (err) {

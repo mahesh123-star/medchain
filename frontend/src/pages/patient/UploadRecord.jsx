@@ -2,7 +2,7 @@ import React, { useState, useRef } from 'react';
 import { Upload, FileText, CheckCircle, ChevronRight } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useWallet } from '../../context/WalletContext';
-import { getContract, parseContractError } from '../../services/web3';
+import { getContract, parseContractError, sendWithCorrectNonce } from '../../services/web3';
 import { generateKeyAndIV, encryptFile } from '../../services/crypto';
 import { uploadEncryptedFile, storeKey } from '../../services/api';
 import { logEvent } from '../../services/logger';
@@ -60,7 +60,9 @@ export default function UploadRecord() {
       setStep('registering');
       addProgress('Registering record on blockchain (confirm MetaMask)...', 'active');
       const contract = getContract(signer);
-      const tx = await contract.uploadRecord(cid, recordName);
+      const tx = await sendWithCorrectNonce(signer, (overrides) =>
+        contract.uploadRecord(cid, recordName, overrides)
+      );
       addProgress('Transaction submitted, waiting for confirmation...');
       const receipt = await tx.wait();
 

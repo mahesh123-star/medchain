@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { Bell } from 'lucide-react';
 import { useWallet } from '../../context/WalletContext';
-import { getContract, ACCESS_STATUS } from '../../services/web3';
+import { getContract, ACCESS_STATUS, sendWithCorrectNonce, parseContractError } from '../../services/web3';
 import { grantKey } from '../../services/api';
 import StatusBadge from '../../components/StatusBadge';
 import ConfirmDialog from '../../components/ConfirmDialog';
@@ -59,13 +59,15 @@ export default function DoctorRequests() {
     try {
       await grantKey(recordId.toString(), doctor);
       const contract = getContract(signer);
-      const tx = await contract.approveAccess(recordId, doctor, 'backend-key-ref');
+      const tx = await sendWithCorrectNonce(signer, (overrides) =>
+        contract.approveAccess(recordId, doctor, 'backend-key-ref', overrides)
+      );
       await tx.wait();
       toast.success('Access approved');
       setConfirm(null);
       await load();
     } catch (err) {
-      toast.error(err.shortMessage || err.message || 'Failed to approve');
+      toast.error(parseContractError(err));
     }
     setActing(false);
   };
@@ -75,13 +77,15 @@ export default function DoctorRequests() {
     setActing(true);
     try {
       const contract = getContract(signer);
-      const tx = await contract.rejectAccess(recordId, doctor);
+      const tx = await sendWithCorrectNonce(signer, (overrides) =>
+        contract.rejectAccess(recordId, doctor, overrides)
+      );
       await tx.wait();
-      toast.success('Rejected');
+      toast.success('Request rejected');
       setConfirm(null);
       await load();
     } catch (err) {
-      toast.error(err.shortMessage || err.message || 'Failed to reject');
+      toast.error(parseContractError(err));
     }
     setActing(false);
   };

@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Shield, Activity, Stethoscope } from 'lucide-react';
 import { useWallet } from '../context/WalletContext';
-import { getContract, formatAddress, parseContractError, ROLE } from '../services/web3';
+import { getContract, formatAddress, parseContractError, sendWithCorrectNonce, ROLE } from '../services/web3';
 import { logEvent } from '../services/logger';
 import Spinner from '../components/Spinner';
 import toast from 'react-hot-toast';
@@ -28,7 +28,9 @@ export default function RegisterPage() {
 
     try {
       const contract = getContract(signer);
-      const tx = asDoctor ? await contract.registerAsDoctor() : await contract.registerAsPatient();
+      const tx = await sendWithCorrectNonce(signer, (overrides) =>
+        asDoctor ? contract.registerAsDoctor(overrides) : contract.registerAsPatient(overrides)
+      );
       toast.loading('Confirming transaction on blockchain...', { id: 'reg' });
       await tx.wait();
       toast.success(`Registered successfully as ${chosenRoleName}!`, { id: 'reg' });

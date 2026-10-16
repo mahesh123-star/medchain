@@ -126,6 +126,39 @@ export async function switchMetaMaskAccount() {
   });
 }
 
+/**
+ * Fetches the REAL current nonce directly from Anvil (bypasses MetaMask cache).
+ * MetaMask sometimes caches stale nonces especially after Anvil restarts or
+ * when cast/Foundry CLI has sent transactions independently.
+ */
+export async function getCorrectNonce(address) {
+  try {
+    const directProvider = new ethers.JsonRpcProvider('http://127.0.0.1:8545');
+    return await directProvider.getTransactionCount(address, 'latest');
+  } catch {
+    return null; // fallback: let MetaMask decide
+  }
+}
+
+/**
+ * Wraps a contract call to inject the correct nonce.
+ * Usage: const tx = await sendWithCorrectNonce(signer, () => contract.someMethod(args));
+ *
+ * This is the fix for "transaction failed" errors caused by MetaMask nonce desync
+ * WITHOUT needing the user to go into MetaMask Settings > Advanced > Reset Account.
+ */
+export async function sendWithCorrectNonce(signer, txFn) {
+  const address = await signer.getAddress();
+  const correctNonce = await getCorrectNonce(address);
+
+  if (correctNonce === null) {
+    // No nonce override available, call normally
+    return txFn({});
+  }
+
+  return txFn({ nonce: correctNonce });
+}
+
 
 export function formatAddress(addr) {
   if (!addr) return '';

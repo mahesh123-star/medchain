@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { FileText, Download, Brain } from 'lucide-react';
 import { useWallet } from '../../context/WalletContext';
-import { getContract } from '../../services/web3';
+import { getContract, sendWithCorrectNonce, parseContractError } from '../../services/web3';
 import { retrieveEncryptedFile, retrieveKey, summarizeReport } from '../../services/api';
 import { decryptData } from '../../services/crypto';
 import Spinner from '../../components/Spinner';
@@ -43,7 +43,9 @@ export default function ApprovedRecords() {
     try {
       const contract = getContract(signer);
       const fullRec = await contract.getRecord(rec.recordId);
-      const logTx = await contract.logAccess(rec.recordId);
+      const logTx = await sendWithCorrectNonce(signer, (overrides) =>
+        contract.logAccess(rec.recordId, overrides)
+      );
       await logTx.wait();
 
       const encryptedBuffer = await retrieveEncryptedFile(fullRec.ipfsCid);
@@ -59,7 +61,7 @@ export default function ApprovedRecords() {
       URL.revokeObjectURL(url);
       toast.success('Record decrypted and downloaded');
     } catch (err) {
-      toast.error(err.message || 'Failed to open record');
+      toast.error(parseContractError(err) || 'Failed to open record');
     }
     setDecrypting(null);
   };
